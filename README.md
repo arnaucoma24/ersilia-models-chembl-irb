@@ -8,3 +8,5 @@ The ChEMBL database must be installed locally before running any script in this 
 ## Steps
 
 1. Getting compounds with reported bioactivity on the ChEMBL database. Splitting compounds in batches of 10,000. 
+
+2. Copy all contents from `data` to the `aloy/home`
