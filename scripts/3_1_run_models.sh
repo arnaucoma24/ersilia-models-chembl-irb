@@ -28,9 +28,12 @@ git clone --depth=1 https://github.com/ersilia-os/ersilia.git "$PATH_TO_ERSILIA/
 
 
 # ---- Install ersilia in the *conda env* ----
-echo "[ersilia] installing in env..."
+echo "[ersilia] installing in conda env..."
 conda run -p "$PATH_TO_ENV" python -m pip install -U pip
 conda run -p "$PATH_TO_ENV" python -m pip install -e "$PATH_TO_ERSILIA/ersilia"
+echo "[ersilia] printing ersilia help..."
+conda run -p "$PATH_TO_ENV" ersilia --help
+conda run -p "$PATH_TO_ENV" ersilia catalog
 
 # ---- Clone models listed in file ----
 mkdir -p "$PATH_TO_EMH"
@@ -41,30 +44,47 @@ while IFS= read -r model || [[ -n "${model:-}" ]]; do
   [[ -z "${model// }" || "$model" =~ ^# ]] && continue
   echo "[model] $model"
 
+  # Redefine HOME dir
+  export HOME="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
+
   # Define model path and url
   repo_dir="$PATH_TO_EMH/$model"
   repo_url="https://github.com/ersilia-os/${model}"
 
   # Remove directory if existing
   if [ -d "$repo_dir" ]; then
-    echo "  -> removing existing repo..."
+    echo "  --> removing existing repository..."
     rm -rf "$repo_dir"
   fi
 
   # Cloning directory
-  echo "  -> cloning fresh..."
+  echo "  --> cloning fresh..."
   git clone --depth=1 "$repo_url" "$repo_dir"
-  
+
+  # Fetching model
+  echo "  --> fetching from_dir..."
+  conda run -p "$PATH_TO_ENV" ersilia -v fetch "$model" --from_dir "$repo_dir"
+
   # Create output directory
   mkdir -p "$PATH_TO_RESULTS/${model}"
 
   # Create logs directory
-  mkdir -p "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs"
+  mkdir -p "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}"
 
-  # Send job to the cluster
+  conda run -p "$PATH_TO_ENV" ersilia catalog
+
+  # # Serving model
+  # echo "  --> serving..."
+  # conda run -p "$PATH_TO_ENV" ersilia -v serve "$model"
+  
+  # Send job to cluster
   N=$(ls "$PATH_TO_SMILES"/*.csv | wc -l)
-  ssh acomajuncosa@irblogin02 --job-name='${model}' --array=0-$((n-1))\
-  "sbatch '$PATH_TO_ERSILIA/ersilia-models-chembl-irb/scripts/3_2_job_submission.sh' '$PATH_TO_SMILES' '$PATH_TO_RESULTS/${model}'"
+  ssh acomajuncosa@irblogin02 \
+    "sbatch --job-name='${model}' \
+            --array=0-$((N-1-N+5)) \
+            --output='$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}/%x_%a.out' \
+            '$PATH_TO_ERSILIA/ersilia-models-chembl-irb/scripts/3_2_job_submission.sh' \
+            '$model' '$PATH_TO_ERSILIA' '$PATH_TO_SMILES' '$PATH_TO_RESULTS/${model}'"
 
 
 done < "$PATH_TO_MODELS"
