@@ -1,5 +1,7 @@
 data/*.csv
 data/splits/*.csv
+results/*
+logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
