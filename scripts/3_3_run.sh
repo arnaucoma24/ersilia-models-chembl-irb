@@ -13,12 +13,10 @@ task_id="$5"
 export HOME="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
 
 
-# Initialize conda
-eval "$(conda shell.bash hook)"
-conda activate "$PATH_TO_ERSILIA"/envs/ersilia
+# # Initialize conda
+# eval "$(conda shell.bash hook)"
+# conda activate "$PATH_TO_ERSILIA"/envs/ersilia
 
-ersilia --help
-ersilia catalog
 
 echo " ------------ "
 conda run -p "$PATH_TO_ERSILIA"/envs/ersilia ersilia catalog
@@ -28,3 +26,5 @@ smiles_file="${files[$task_id]}"
 
 # ersilia serve "$model"
 # ersilia run -i "$smiles_file" -o ."$PATH_TO_RESULTS/results_$task_id.csv"
+
+sleep 5
