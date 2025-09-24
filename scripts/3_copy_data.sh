@@ -8,3 +8,6 @@ mkdir -p "$DEST"
 cp -r "$SOURCE"/* "$DEST"/
 
 echo "Copied contents of $SOURCE -> $DEST"
+
+
+# Copy Ersilia models as well

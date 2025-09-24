@@ -3,10 +3,10 @@ set -euo pipefail
 
 # ---- Paths (edit if your layout changes) ----
 PATH_TO_ERSILIA="/aloy/home/acomajuncosa/Ersilia"
-PATH_TO_MODELS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/ersilia_models.txt"
-PATH_TO_EMH="$PATH_TO_ERSILIA/ErsiliaModelHub"
-PATH_TO_ENV="$PATH_TO_ERSILIA/envs/ersilia"
-PATH_TO_SMILES="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/splits"
+PATH_TO_MODELS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/ersilia_models.txt"  # ersilia models listed
+PATH_TO_EMH="$PATH_TO_ERSILIA/ErsiliaModelHub"  # ersilia models cloned
+PATH_TO_ENV="$PATH_TO_ERSILIA/envs/ersilia"  # ersilia package
+PATH_TO_SMILES="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/splits"  # splits of 10k compounds
 PATH_TO_RESULTS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/results"
 
 # Change WD
