@@ -10,7 +10,6 @@ PATH_TO_SMILES="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/splits"  # split
 PATH_TO_RESULTS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/results"
 
 # ---- Change working directory ----
-mkdir -p "$PATH_TO_ERSILIA"
 cd "$PATH_TO_ERSILIA"
 
 # ---- Create/ensure env (Python 3.10) ----
@@ -33,6 +32,13 @@ conda run -p "$PATH_TO_ENV" python -m pip install -e "$PATH_TO_ERSILIA/ersilia"
 echo "[ersilia] printing ersilia help..."
 conda run -p "$PATH_TO_ENV" ersilia --help
 
+# ---- Clean eos folder if needed ----
+cd ~
+if [ -d "eos" ]; then
+  echo "[ersilia] removing eos..."
+  rm -rf "eos"
+fi
+
 # ---- Clone models listed in file ----
 mkdir -p "$PATH_TO_EMH"
 cd "$PATH_TO_EMH"
@@ -43,11 +49,11 @@ while IFS= read -r model || [[ -n "${model:-}" ]]; do
   [[ -z "${model// }" || "$model" =~ ^# ]] && continue
   echo "[model] $model"
 
-  # Redefine HOME dir and clean it if necessary
-  export HOME="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
-  if [ -d "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model" ]; then
-    rm -rf "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
-  fi
+  # # Redefine HOME dir and clean it if necessary
+  # export HOME="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
+  # if [ -d "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model" ]; then
+  #   rm -rf "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
+  # fi
 
   # Check which models are already fetched
   conda run -p "$PATH_TO_ENV" ersilia catalog
