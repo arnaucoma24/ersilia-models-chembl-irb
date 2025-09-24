@@ -11,7 +11,7 @@ PATH_TO_ERSILIA="$2"
 PATH_TO_SMILES="$3"
 PATH_TO_RESULTS="$4"
 
-# Change WD
+# Change working directory
 cd "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/scripts"
 
 # Loads default environment configuration
@@ -20,5 +20,5 @@ export SINGULARITY_BINDPATH="/home/sbnb:/aloy/home,/data/sbnb/data:/aloy/data,/d
 
 # Run inside the Singularity container
 singularity exec --cleanenv \
-  /apps/singularity/ood_images/docker_irb_intel-optimized-tensorflow-avx512-2.13-pip-conda-jupyter-v6.sif ./3_3_run.sh \
+  /apps/singularity/ood_images/docker_irb_intel-optimized-tensorflow-avx512-2.13-pip-conda-jupyter-v6.sif ./4_3_run.sh \
   "$model" "$PATH_TO_ERSILIA" "$PATH_TO_SMILES" "$PATH_TO_RESULTS" "$SLURM_ARRAY_TASK_ID"
