@@ -42,7 +42,7 @@ with open(os.path.join(output_dir, f"{model}_{str(task_id).zfill(3)}.csv"), "w")
         results = os.path.join(TMP_PATH, f"results_{numb}.csv")
         with open(split, "r") as fs, open(results, "r") as fr:
             for c, (i,j) in enumerate(zip(fs, fr)):
-                if c == 0:
+                if c == 0 and numb == 0:
                     output_file.write("key," + i.strip() + "," + j)
                 else:
                     output_file.write(identifier.convert_smiles_to_checksum(i.strip()) + "," + i.strip() + "," + j)
