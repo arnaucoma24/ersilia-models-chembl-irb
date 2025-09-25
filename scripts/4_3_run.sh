@@ -38,6 +38,7 @@ for split_file in "$PATH_TO_RESULTS/$model"_"$task_id_z"_tmp/split_*.csv; do
   x="${x%.csv}"                   # remove ".csv", now it's just 7
 
   # run the model on this split file
+  echo "$split_file"
   bash run.sh . "$split_file" "$PATH_TO_RESULTS/${model}_${task_id_z}_tmp/results_${x}.csv"
 done
 

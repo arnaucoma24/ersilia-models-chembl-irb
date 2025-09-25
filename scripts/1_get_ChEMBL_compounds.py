@@ -47,20 +47,19 @@ ChEMBL_data = pd.read_csv(outfile)
 print(f"Number of ChEMBL compounds: {len(ChEMBL_data)}")
 
 
-# # Remove rdkit-failed molecules -- None of them fail!
-# print("Removing rdkit-failed molecules")
-# smiles = ChEMBL_data['canonical_smiles'].tolist()
-# failed = []
-# for smi in tqdm(smiles):
-#     try:
-#         mol = Chem.MolFromSmiles(smi)
-#         failed.append(False)
-#     except:
-#         print(smi)
-#         failed.append(True)
-# ChEMBL_data['rdkit-failed'] = failed
-# ChEMBL_data = ChEMBL_data[ChEMBL_data['rdkit-failed'] == False].reset_index(drop=True)
-# print(f"Number of ChEMBL compounds (after rdkit failures): {len(ChEMBL_data)}")
+# Remove rdkit-failed molecules -- None of them fail!
+print("Removing rdkit-failed molecules")
+smiles = ChEMBL_data['canonical_smiles'].tolist()
+failed = []
+for smi in tqdm(smiles):
+    mol = Chem.MolFromSmiles(smi)
+    if mol == None:
+        failed.append(True)
+    else:
+        failed.append(False)
+ChEMBL_data['rdkit-failed'] = failed
+ChEMBL_data = ChEMBL_data[ChEMBL_data['rdkit-failed'] == False].reset_index(drop=True)
+print(f"Number of ChEMBL compounds (after rdkit failures): {len(ChEMBL_data)}")
 
 # Creating splits
 split_size = 10000
