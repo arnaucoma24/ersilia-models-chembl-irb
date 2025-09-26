@@ -43,9 +43,10 @@ fi
 mkdir -p "$PATH_TO_EMH"
 cd "$PATH_TO_EMH"
 
-while IFS= read -r model || [[ -n "${model:-}" ]]; do
+# ---- Get list of models to work with ----
+mapfile -t models < "$PATH_TO_MODELS"
 
-  # Skip empty lines or lines starting with '#' (comments in the file)
+for model in "${models[@]}"; do
   [[ -z "${model// }" || "$model" =~ ^# ]] && continue
   echo "[model] $model"
 
@@ -96,4 +97,4 @@ while IFS= read -r model || [[ -n "${model:-}" ]]; do
             '$model' '$PATH_TO_ERSILIA' '$PATH_TO_SMILES' '$PATH_TO_RESULTS/${model}'"
 
 
-done < "$PATH_TO_MODELS"
+done
