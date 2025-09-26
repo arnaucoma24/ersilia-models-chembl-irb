@@ -83,15 +83,38 @@ for model in "${models[@]}"; do
   # Create logs directory
   mkdir -p "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}"
 
-  # Migrate conda env and remove the local version
-  conda create -y -p "$PATH_TO_ERSILIA"/envs/"$model" --clone "$model"
+  # # Migrate conda env and remove the local version
+  # rm -rf ?
+  # conda create -y -p "$PATH_TO_ERSILIA"/envs/"$model" --clone "$model" -y
+  # conda remove --name "$model" --all -y
+
+  # --- Migrate conda env to shared prefix using EXPLICIT LOCK + PIP ---
+  DST="$PATH_TO_ERSILIA/envs/$model"
+  LOCK="$PATH_TO_ERSILIA/envs/${model}.lock"
+  PIPREQ="$PATH_TO_ERSILIA/envs/${model}.pip.txt"
+  printf '[lock] %q\n[pip]  %q\n' "$LOCK" "$PIPREQ"
+  mkdir -p "$(dirname "$LOCK")"
+  conda list -n "$model" --explicit > "$LOCK"
+  if [ ! -s "$LOCK" ]; then
+    echo "ERROR: lock file not created at $LOCK"; exit 1
+  fi
+  # capture pip deps from the local env (may be empty)
+  conda run -n "$model" python -m pip freeze > "$PIPREQ" || true
+  rm -rf "$DST"
+  conda create -p "$DST" --file "$LOCK" -y
+  # re-install pip deps into the shared env
+  if [ -s "$PIPREQ" ]; then
+    # conda run -p "$DST" python -m pip install -r "$PIPREQ"
+    conda run -p "$DST" env PYTHONNOUSERSITE=1 PIP_USER=no python -m pip install --no-user -r "$PIPREQ"
+
+  fi
   conda remove --name "$model" --all -y
   
   # Send job to cluster
   N=$(ls "$PATH_TO_SMILES"/*.csv | wc -l)
   ssh acomajuncosa@irblogin02 \
     "sbatch --job-name='${model}' \
-            --array=0-$((N-1)) \
+            --array=0-$((N-1-N+1)) \
             --output='$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}/${model}_%03a.out' \
             '$PATH_TO_ERSILIA/ersilia-models-chembl-irb/scripts/4_2_job_submission.sh' \
             '$model' '$PATH_TO_ERSILIA' '$PATH_TO_SMILES' '$PATH_TO_RESULTS/${model}'"
