@@ -8,6 +8,15 @@ PATH_TO_EMH="$PATH_TO_ERSILIA/ErsiliaModelHub"  # ersilia models cloned
 PATH_TO_ENV="$PATH_TO_ERSILIA/envs/ersilia"  # ersilia package
 PATH_TO_SMILES="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/splits"  # splits of 10k compounds
 PATH_TO_RESULTS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/results"
+PATH_TO_CUSTOM_ENV_DIR="$PATH_TO_ERSILIA/envs"
+
+# Check if envs_dirs already contains PATH_TO_CUSTOM_ENV_DIR
+if ! conda config --show envs_dirs | grep -q "$PATH_TO_CUSTOM_ENV_DIR"; then
+  echo "[conda] Adding $PATH_TO_CUSTOM_ENV_DIR to envs_dirs..."
+  conda config --append envs_dirs "$PATH_TO_CUSTOM_ENV_DIR"
+else
+  echo "[conda] $PATH_TO_CUSTOM_ENV_DIR already in envs_dirs."
+fi
 
 # ---- Change working directory ----
 cd "$PATH_TO_ERSILIA"
@@ -27,16 +36,16 @@ git clone --depth=1 https://github.com/ersilia-os/ersilia.git "$PATH_TO_ERSILIA/
 
 # ---- Install ersilia in the *conda env* ----
 echo "[ersilia] installing in conda env..."
-conda run -p "$PATH_TO_ENV" python -m pip install -U pip
+conda run -p "$PATH_TO_ENV" python -m pip install -U pip setuptools wheel
 conda run -p "$PATH_TO_ENV" python -m pip install -e "$PATH_TO_ERSILIA/ersilia"
 echo "[ersilia] printing ersilia help..."
 conda run -p "$PATH_TO_ENV" ersilia --help
 
 # ---- Clean eos folder if needed ----
-cd ~
-if [ -d "eos" ]; then
-  echo "[ersilia] removing eos..."
-  rm -rf "eos"
+EOS_DIR="$HOME/eos"
+if [ -d "$EOS_DIR" ]; then
+  echo "[ersilia] removing $EOS_DIR..."
+  rm -rf -- "$EOS_DIR"
 fi
 
 # ---- Clone models listed in file ----
@@ -49,12 +58,6 @@ mapfile -t models < "$PATH_TO_MODELS"
 for model in "${models[@]}"; do
   [[ -z "${model// }" || "$model" =~ ^# ]] && continue
   echo "[model] $model"
-
-  # # Redefine HOME dir and clean it if necessary
-  # export HOME="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
-  # if [ -d "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model" ]; then
-  #   rm -rf "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/tmp/$model"
-  # fi
 
   # Check which models are already fetched
   conda run -p "$PATH_TO_ENV" ersilia catalog
@@ -75,46 +78,21 @@ for model in "${models[@]}"; do
 
   # Fetching model
   echo "  --> fetching from_dir..."
+  export CONDA_ENVS_PATH="$PATH_TO_ERSILIA/envs"
   conda run -p "$PATH_TO_ENV" ersilia -v fetch "$model" --from_dir "$repo_dir"
+  # this command will automatically creaate a conda environment. I want this env to be in $PATH_TO_ENV
 
   # Create output directory
   mkdir -p "$PATH_TO_RESULTS/${model}"
 
   # Create logs directory
   mkdir -p "$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}"
-
-  # # Migrate conda env and remove the local version
-  # rm -rf ?
-  # conda create -y -p "$PATH_TO_ERSILIA"/envs/"$model" --clone "$model" -y
-  # conda remove --name "$model" --all -y
-
-  # --- Migrate conda env to shared prefix using EXPLICIT LOCK + PIP ---
-  DST="$PATH_TO_ERSILIA/envs/$model"
-  LOCK="$PATH_TO_ERSILIA/envs/${model}.lock"
-  PIPREQ="$PATH_TO_ERSILIA/envs/${model}.pip.txt"
-  printf '[lock] %q\n[pip]  %q\n' "$LOCK" "$PIPREQ"
-  mkdir -p "$(dirname "$LOCK")"
-  conda list -n "$model" --explicit > "$LOCK"
-  if [ ! -s "$LOCK" ]; then
-    echo "ERROR: lock file not created at $LOCK"; exit 1
-  fi
-  # capture pip deps from the local env (may be empty)
-  conda run -n "$model" python -m pip freeze > "$PIPREQ" || true
-  rm -rf "$DST"
-  conda create -p "$DST" --file "$LOCK" -y
-  # re-install pip deps into the shared env
-  if [ -s "$PIPREQ" ]; then
-    # conda run -p "$DST" python -m pip install -r "$PIPREQ"
-    conda run -p "$DST" env PYTHONNOUSERSITE=1 PIP_USER=no python -m pip install --no-user -r "$PIPREQ"
-
-  fi
-  conda remove --name "$model" --all -y
   
   # Send job to cluster
   N=$(ls "$PATH_TO_SMILES"/*.csv | wc -l)
   ssh acomajuncosa@irblogin02 \
     "sbatch --job-name='${model}' \
-            --array=0-$((N-1-N+1)) \
+            --array=0-$((N-1))%10 \
             --output='$PATH_TO_ERSILIA/ersilia-models-chembl-irb/logs/${model}/${model}_%03a.out' \
             '$PATH_TO_ERSILIA/ersilia-models-chembl-irb/scripts/4_2_job_submission.sh' \
             '$model' '$PATH_TO_ERSILIA' '$PATH_TO_SMILES' '$PATH_TO_RESULTS/${model}'"

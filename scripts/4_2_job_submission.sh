@@ -3,7 +3,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
+#SBATCH --mem=8G
 #SBATCH -p sbnb_cpu_sphr,sbnb_cpu_zen3
 
 model="$1"
