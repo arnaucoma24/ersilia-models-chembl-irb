@@ -10,13 +10,8 @@ PATH_TO_SMILES="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/data/splits"  # split
 PATH_TO_RESULTS="$PATH_TO_ERSILIA/ersilia-models-chembl-irb/results"
 PATH_TO_CUSTOM_ENV_DIR="$PATH_TO_ERSILIA/envs"
 
-# Check if envs_dirs already contains PATH_TO_CUSTOM_ENV_DIR
-if ! conda config --show envs_dirs | grep -q "$PATH_TO_CUSTOM_ENV_DIR"; then
-  echo "[conda] Adding $PATH_TO_CUSTOM_ENV_DIR to envs_dirs..."
-  conda config --append envs_dirs "$PATH_TO_CUSTOM_ENV_DIR"
-else
-  echo "[conda] $PATH_TO_CUSTOM_ENV_DIR already in envs_dirs."
-fi
+# Ensure custom envs directory exists
+mkdir -p "$PATH_TO_CUSTOM_ENV_DIR"
 
 # ---- Change working directory ----
 cd "$PATH_TO_ERSILIA"
@@ -55,6 +50,11 @@ cd "$PATH_TO_EMH"
 # ---- Get list of models to work with ----
 mapfile -t models < "$PATH_TO_MODELS"
 
+# ensure conda-pack is available (once)
+CONDA_BASE="$(conda info --base)"  # e.g. /home/acomajuncosa/programs/anaconda3
+echo "[conda-pack] ensuring conda-pack is installed..."
+conda run -n base python -m pip install --no-cache-dir --upgrade conda-pack
+
 for model in "${models[@]}"; do
   [[ -z "${model// }" || "$model" =~ ^# ]] && continue
   echo "[model] $model"
@@ -78,10 +78,34 @@ for model in "${models[@]}"; do
 
   # Fetching model
   echo "  --> fetching from_dir..."
-  export CONDA_ENVS_PATH="$PATH_TO_ERSILIA/envs"
   conda run -p "$PATH_TO_ENV" ersilia -v fetch "$model" --from_dir "$repo_dir"
-  # this command will automatically creaate a conda environment. I want this env to be in $PATH_TO_ENV
+  # this command will automatically create a conda environment.
 
+  # --- Move the freshly-built env to /aloy using conda-pack ---
+  
+  LOCAL_ENV_DIR="$CONDA_BASE/envs/$model"  # env created by ersilia fetch
+  SHARED_ENV_DIR="$PATH_TO_CUSTOM_ENV_DIR/$model"  # /aloy/home/acomajuncosa/Ersilia/envs/<MODEL>
+  PKG_TAR="$SHARED_ENV_DIR.tar.gz"
+
+  echo "  --> packing local env with conda-pack"
+  # write tarball to /aloy (saves /home space)
+  mkdir -p "$PATH_TO_CUSTOM_ENV_DIR"
+  conda run -n base conda-pack -p "$LOCAL_ENV_DIR" -o "$PKG_TAR" --ignore-missing-files
+
+  echo "  --> unpacking env on shared FS: $SHARED_ENV_DIR"
+  mkdir -p "$SHARED_ENV_DIR"
+  tar -xzf "$PKG_TAR" -C "$SHARED_ENV_DIR"
+
+  # fix prefixes/paths inside the unpacked env
+  "$SHARED_ENV_DIR/bin/conda-unpack"
+
+  # cleanup
+  rm -f "$PKG_TAR"
+
+  # Remove the local env to avoid confusion
+  conda run -n base conda env remove -p "$LOCAL_ENV_DIR" -y || true
+  echo "  --> shared env ready at: $SHARED_ENV_DIR"
+  
   # Create output directory
   mkdir -p "$PATH_TO_RESULTS/${model}"
 
